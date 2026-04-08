@@ -7,6 +7,9 @@ let supabase: any;
 
 export const createClient = () => {
   if (!supabaseUrl || !supabaseAnonKey) {
+    if (typeof window !== 'undefined') {
+      console.error("ERRO: Variáveis de ambiente NEXT_PUBLIC_SUPABASE_URL ou NEXT_PUBLIC_SUPABASE_ANON_KEY não encontradas no Vercel.");
+    }
     return null; // Evita o erro fatal no build do Vercel
   }
 

@@ -27,6 +27,10 @@ export default function LoginPage() {
     setError("");
 
     try {
+      if (!supabase) {
+        throw new Error("Erro de configuração: Conexão com o banco de dados não disponível. Verifique as variáveis de ambiente.");
+      }
+
       const { data, error: dbError } = await supabase
         .from('admins')
         .select('*')
