@@ -1,0 +1,5 @@
+{
+  "name": "AutoProdução - Turno Manhã",
+  "description": "Sistema industrial para controle de produção automotiva com bipagem de VIN em tempo real.",
+  "requestFramePermissions": ["camera"]
+}
