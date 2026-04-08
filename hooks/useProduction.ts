@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { startOfToday, addHours, isBefore, subDays } from 'date-fns'
+import { validateVIN } from '@/utils/vin'
 
 export interface Production {
   id: string
@@ -73,6 +74,12 @@ export function useProduction(options?: { allHistory?: boolean }) {
   }, [fetchData, supabase])
 
   const addProduction = async (production: Omit<Production, 'id' | 'timestamp'>) => {
+    // Validação extra antes de enviar ao banco
+    const validation = validateVIN(production.vin);
+    if (!validation.isValid) {
+      return { error: { message: validation.error || "VIN Inválido", code: 'VIN_INVALID' } };
+    }
+
     const { error } = await supabase
       .from('productions')
       .insert([production])

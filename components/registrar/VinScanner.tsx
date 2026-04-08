@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
-import { Scan, Keyboard, Camera, X, CheckCircle2 } from "lucide-react";
+import { validateVIN } from "@/utils/vin";
+import { 
+  Scan, 
+  Keyboard, 
+  Camera, 
+  X, 
+  CheckCircle2, 
+  AlertCircle 
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VinScannerProps {
@@ -13,7 +21,26 @@ interface VinScannerProps {
 export function VinScanner({ onScan, disabled }: VinScannerProps) {
   const [mode, setMode] = useState<'input' | 'camera'>('input');
   const [vinInput, setVinInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+
+  // Auto-submit quando atinge 17 caracteres
+  useEffect(() => {
+    const cleanVin = vinInput.trim().toUpperCase();
+    
+    if (cleanVin.length === 17) {
+      const validation = validateVIN(cleanVin);
+      if (validation.isValid) {
+        setError(null);
+        onScan(cleanVin);
+        setVinInput("");
+      } else {
+        setError(validation.error || "VIN Inválido");
+      }
+    } else {
+      setError(null);
+    }
+  }, [vinInput, onScan]);
 
   useEffect(() => {
     if (mode === 'camera' && !disabled) {
@@ -25,8 +52,7 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
 
       scannerRef.current.render(
         (decodedText) => {
-          setVinInput(decodedText);
-          // Don't auto-read, wait for button
+          setVinInput(decodedText.toUpperCase());
         },
         (error) => {
           // Silent error for continuous scanning
@@ -41,12 +67,23 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
     };
   }, [mode, disabled]);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase().replace(/[IOQ]/g, "");
+    setVinInput(value);
+  };
+
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (vinInput.trim()) {
-      onScan(vinInput.trim());
-      setVinInput("");
-      if (mode === 'camera') setMode('input');
+    const cleanVin = vinInput.trim();
+    if (cleanVin) {
+      const validation = validateVIN(cleanVin);
+      if (validation.isValid) {
+        onScan(cleanVin);
+        setVinInput("");
+        if (mode === 'camera') setMode('input');
+      } else {
+        setError(validation.error || "VIN Inválido");
+      }
     }
   };
 
@@ -96,17 +133,26 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
               <input
                 type="text"
                 autoFocus
+                maxLength={17}
                 placeholder="AGUARDANDO BIP/VIN"
                 className={cn(
-                  "w-full bg-white/[0.02] border border-white/[0.05] rounded-2xl p-6 pl-16 text-2xl font-black font-mono tracking-[0.2em] text-accent-gold outline-none focus:border-accent-gold/40 transition-all",
+                  "w-full bg-white/[0.02] border rounded-2xl p-6 pl-16 text-2xl font-black font-mono tracking-[0.2em] outline-none transition-all",
+                  error ? "border-red-500 text-red-500 animate-shake" : "border-white/[0.05] text-accent-gold focus:border-accent-gold/40",
                   disabled && "opacity-50 cursor-not-allowed"
                 )}
                 value={vinInput}
-                onChange={(e) => setVinInput(e.target.value.toUpperCase())}
+                onChange={handleInputChange}
                 disabled={disabled}
               />
-              <Scan className={cn("absolute left-6 top-1/2 -translate-y-1/2 w-7 h-7", disabled ? "text-slate-700" : "text-slate-500 group-focus-within:text-accent-gold transition-colors")} />
+              <Scan className={cn("absolute left-6 top-1/2 -translate-y-1/2 w-7 h-7", error ? "text-red-500" : (disabled ? "text-slate-700" : "text-slate-500 group-focus-within:text-accent-gold transition-colors"))} />
             </div>
+            
+            {error && (
+              <div className="flex items-center gap-2 justify-center text-red-500 animate-in fade-in slide-in-from-top-2">
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest">{error}</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -126,7 +172,7 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
       </div>
 
       <p className="text-[10px] uppercase font-black tracking-[0.3em] text-slate-700 text-center">
-        {mode === 'camera' ? "Posicione o QR/Código de Barras no centro" : "Utilize o leitor laser ou digite manualmente"}
+        {mode === 'camera' ? "Posicione o QR/Código de Barras no centro" : "O sistema salvará automaticamente ao atingir 17 caracteres"}
       </p>
     </div>
   );
