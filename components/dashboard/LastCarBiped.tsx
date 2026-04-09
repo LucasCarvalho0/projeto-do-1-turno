@@ -1,6 +1,7 @@
 "use client";
 
 import { useProduction } from "@/hooks/useProduction";
+import { format } from "date-fns";
 
 export function LastCarBiped() {
   const { data: productions, loading } = useProduction();
