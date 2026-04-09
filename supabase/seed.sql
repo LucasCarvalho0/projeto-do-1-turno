@@ -41,7 +41,7 @@ INSERT INTO public.settings (id, meta) VALUES (1, 90) ON CONFLICT (id) DO NOTHIN
 
 -- Inserir usuário administrativo padrão (Checklist)
 INSERT INTO public.admins (matricula, senha, nome, tipo) 
-VALUES ('116203', '123', 'Ana', 'admin') 
+VALUES ('116203', '123', 'Anna Karolina', 'admin') 
 ON CONFLICT (matricula) DO NOTHING;
 
 -- Habilitar Realtime para a tabela de produções
