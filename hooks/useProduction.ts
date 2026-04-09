@@ -10,6 +10,9 @@ export interface Production {
   versao: string
   timestamp: string
   sync_status?: string
+  employees?: {
+    nome: string;
+  }
 }
 
 export function useProduction(options?: { allHistory?: boolean }) {
