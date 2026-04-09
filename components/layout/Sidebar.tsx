@@ -26,7 +26,12 @@ const menuItems = [
   { name: "Configurações", href: "/configuracoes", icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -45,7 +50,20 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-72 h-screen bg-[#0d0e10] border-r border-white-[0.03] fixed left-0 top-0 flex flex-col z-50">
+    <>
+      {/* Mobile Overlay */}
+      <div 
+        className={cn(
+          "fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden transition-all duration-300",
+          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+        onClick={onClose}
+      />
+
+      <aside className={cn(
+        "w-72 h-screen bg-[#0d0e10] border-r border-white-[0.03] fixed left-0 top-0 flex flex-col transition-all duration-300 ease-in-out z-[70] lg:z-50",
+        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
       <div className="p-10">
         <h1 className="text-2xl font-black tracking-tighter text-accent-gold italic leading-none mb-1">
           AUTOPROD
@@ -110,5 +128,6 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }

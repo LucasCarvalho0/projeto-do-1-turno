@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/client'
 
 export function useSettings() {
   const [meta, setMeta] = useState(90)
+  const [turnoInicio, setTurnoInicio] = useState('06:00')
+  const [turnoFim, setTurnoFim] = useState('16:48')
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -10,12 +12,14 @@ export function useSettings() {
     try {
       const { data, error } = await supabase
         .from('settings')
-        .select('meta')
+        .select('meta, turno_inicio, turno_fim')
         .eq('id', 1)
         .single()
 
       if (!error && data) {
         setMeta(data.meta)
+        setTurnoInicio(data.turno_inicio)
+        setTurnoFim(data.turno_fim)
       }
     } catch (err) {
       console.error("Error fetching settings:", err)
@@ -37,8 +41,10 @@ export function useSettings() {
           filter: 'id=eq.1' 
         }, 
         (payload: any) => {
-          if (payload.new && typeof payload.new.meta === 'number') {
-            setMeta(payload.new.meta)
+          if (payload.new) {
+            if (typeof payload.new.meta === 'number') setMeta(payload.new.meta)
+            if (payload.new.turno_inicio) setTurnoInicio(payload.new.turno_inicio)
+            if (payload.new.turno_fim) setTurnoFim(payload.new.turno_fim)
           }
         }
       )
@@ -49,5 +55,5 @@ export function useSettings() {
     }
   }, [fetchSettings, supabase])
 
-  return { meta, loading, refresh: fetchSettings }
+  return { meta, turnoInicio, turnoFim, loading, refresh: fetchSettings }
 }

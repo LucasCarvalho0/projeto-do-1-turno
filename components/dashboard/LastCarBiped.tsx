@@ -16,12 +16,12 @@ export function LastCarBiped() {
         </div>
       </div>
 
-      <div className="space-y-2 mt-8">
-        <p className="text-4xl font-black text-accent-gold tracking-[0.05em] font-mono italic">
+      <div className="space-y-4 mt-8 overflow-hidden">
+        <p className="text-2xl min-[400px]:text-3xl xl:text-4xl font-black text-accent-gold tracking-[0.05em] font-mono italic break-all leading-tight">
           {loading ? "SEARCHING..." : lastCar?.vin || "AGUARDANDO..."}
         </p>
-        <p className="text-[11px] text-slate-500 font-bold uppercase tracking-tight">
-          {loading ? "..." : lastCar ? `CARLOS SOUZA · ${lastCar.versao} EXCLUSIVE · 12:56` : "SISTEMA PRONTO"}
+        <p className="text-[11px] text-slate-500 font-bold uppercase tracking-[0.1em] truncate">
+          {loading ? "..." : lastCar ? `${lastCar.employees?.nome || 'OPERADOR'} · ${lastCar.versao} · ${format(new Date(lastCar.timestamp), 'HH:mm')}` : "SISTEMA PRONTO"}
         </p>
       </div>
     </div>

@@ -10,16 +10,53 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function StatsCards({ meta = 90 }: { meta: number }) {
-  const { data: productions, loading } = useProduction();
+import { useSettings } from "@/hooks/useSettings";
+import { parse, differenceInMinutes, format, startOfToday, isAfter, addDays } from "date-fns";
+
+export function StatsCards() {
+  const { data: productions, loading: pLoad } = useProduction();
+  const { meta, turnoInicio, turnoFim, loading: sLoad } = useSettings();
   
+  const loading = pLoad || sLoad;
   const countToday = productions.length;
+
+  // Cálculos de Tempo e Produtividade
+  const now = new Date();
+  const today = startOfToday();
+  
+  // Parse dos tempos de início e fim
+  const startStr = turnoInicio || "06:00";
+  const endStr = turnoFim || "16:48";
+  
+  const startTime = parse(startStr, 'HH:mm', today);
+  let endTime = parse(endStr, 'HH:mm', today);
+  
+  // Se o fim for antes do início, assume que termina no dia seguinte
+  if (isAfter(startTime, endTime)) {
+    endTime = addDays(endTime, 1);
+  }
+
+  const totalMinutes = differenceInMinutes(endTime, startTime);
+  const elapsedMinutes = Math.max(0, differenceInMinutes(now, startTime));
+  const elapsedHours = elapsedMinutes / 60;
+  
+  // Média por hora real
+  const averagePerHour = elapsedHours > 0 ? (countToday / elapsedHours).toFixed(1) : "0.0";
+  
+  // Meta por hora esperada
+  const targetPerHour = totalMinutes > 0 ? (meta / (totalMinutes / 60)) : 10;
+  const isAboveAverage = parseFloat(averagePerHour) >= targetPerHour;
+
+  // Formatação do tempo decorrido
+  const hoursElapsed = Math.floor(elapsedMinutes / 60);
+  const minsElapsed = elapsedMinutes % 60;
+  const timeDisplay = `${hoursElapsed.toString().padStart(2, '0')}:${minsElapsed.toString().padStart(2, '0')}`;
 
   const stats = [
     {
       title: "CARROS BIPADOS HOJE",
       value: loading ? "..." : countToday.toString(),
-      label: "+12 na última hora",
+      label: "Produção Total do Turno",
       icon: CheckCircle2,
       color: "text-accent-gold",
       border: "border-t-accent-gold",
@@ -27,26 +64,26 @@ export function StatsCards({ meta = 90 }: { meta: number }) {
     {
       title: "META DO TURNO",
       value: meta.toString(),
-      label: `${Math.max(0, meta - countToday)} restantes`,
+      label: `${Math.max(0, meta - countToday)} restantes para o objetivo`,
       icon: Target,
       color: "text-accent-purple",
       border: "border-t-accent-purple",
     },
     {
       title: "TEMPO DE TURNO",
-      value: "06:48",
-      label: "Início: 06:00",
+      value: timeDisplay,
+      label: `Início: ${startStr}`,
       icon: Clock,
       color: "text-accent-blue",
       border: "border-t-accent-blue",
     },
     {
       title: "MÉDIA POR HORA",
-      value: "10.4",
-      label: "Acima da média",
+      value: averagePerHour,
+      label: isAboveAverage ? "Acima da média esperada" : "Abaixo da média esperada",
       icon: BarChart3,
-      color: "text-accent-blue",
-      border: "border-t-accent-blue",
+      color: isAboveAverage ? "text-accent-green" : "text-accent-red",
+      border: isAboveAverage ? "border-t-accent-green" : "border-t-accent-red",
     }
   ];
 
