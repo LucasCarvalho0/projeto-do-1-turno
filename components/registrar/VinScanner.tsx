@@ -31,23 +31,20 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const containerId = "reader";
 
-  // Auto-submit quando atinge 17 caracteres
+  // Auto-submit removido por solicitação do usuário para garantir conferência manual
   useEffect(() => {
     const cleanVin = vinInput.trim().toUpperCase();
-    if (cleanVin.length === 17) {
+    if (cleanVin.length >= 11) {
       const validation = validateVIN(cleanVin);
-      if (validation.isValid) {
-        setError(null);
-        onScan(cleanVin);
-        setVinInput("");
-        if (mode === 'camera') setMode('input');
-      } else {
+      if (!validation.isValid) {
         setError(validation.error || "VIN Inválido");
+      } else {
+        setError(null);
       }
     } else {
       setError(null);
     }
-  }, [vinInput, onScan, mode]);
+  }, [vinInput]);
 
   const stopScanner = async () => {
     if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
@@ -245,8 +242,8 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
               <input
                 type="text"
                 autoFocus
-                maxLength={17}
-                placeholder="AGUARDANDO BIP/VIN"
+                maxLength={30}
+                placeholder="BIPE OU DIGITE O VIN"
                 className={cn(
                   "w-full bg-white/[0.02] border rounded-2xl p-6 pl-16 text-2xl font-black font-mono tracking-[0.2em] outline-none transition-all",
                   error ? "border-red-500 text-red-500 animate-shake" : "border-white/[0.05] text-accent-gold focus:border-accent-gold/40",
@@ -284,7 +281,7 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
       </div>
 
       <p className="text-[10px] uppercase font-black tracking-[0.3em] text-slate-700 text-center">
-        {mode === 'camera' ? "Aponte para o código de barras do veículo" : "O sistema salvará automaticamente ao atingir 17 caracteres"}
+        {mode === 'camera' ? "Aponte para o código de barras do veículo" : "Bipe o carro e clique em 'Confirmar Montagem'"}
       </p>
     </div>
   );

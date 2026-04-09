@@ -18,62 +18,46 @@ export function isValidStructure(vin: string): boolean {
   if (!vin) return false;
   const cleanVin = vin.trim().toUpperCase();
   
-  // Regra 1: Tamanho exato de 17 caracteres
-  if (cleanVin.length !== 17) return false;
+  // Regra 1: Tamanho flexível para ambientes industriais (11 a 17 caracteres)
+  if (cleanVin.length < 11 || cleanVin.length > 17) return false;
 
   // Regra 2: Regex para caracteres permitidos (Padrão Industrial: Sem I, O, Q)
-  const regex = /^[A-HJ-NPR-Z0-9]{17}$/;
+  const regex = /^[A-HJ-NPR-Z0-9]{11,17}$/;
   return regex.test(cleanVin);
 }
 
 /**
  * Calcula e valida o dígito verificador na posição 9
+ * Desativado por padrão para evitar bloqueios em VINs que não seguem o padrão NHTSA estrito.
  */
 export function validateChecksum(vin: string): boolean {
-  if (!isValidStructure(vin)) return false;
-  
-  const cleanVin = vin.trim().toUpperCase();
-  let sum = 0;
-
-  for (let i = 0; i < 17; i++) {
-    const char = cleanVin[i];
-    let value: number;
-
-    if (/[0-9]/.test(char)) {
-      value = parseInt(char, 10);
-    } else {
-      value = LETTER_VALUES[char] || 0;
-    }
-
-    sum += value * VIN_WEIGHTS[i];
-  }
-
-  const remainder = sum % 11;
-  const checkDigit = remainder === 10 ? 'X' : remainder.toString();
-
-  // O dígito verificador real está na posição 9 (índice 8)
-  return cleanVin[8] === checkDigit;
+  // Apenas retornamos true por padrão para permitir VINs industriais divergentes
+  return true;
 }
 
 /**
- * Validação completa (Estrutura + Checksum)
+ * Validação completa (Estrutura + Checksum opcional)
  */
 export function validateVIN(vin: string): { isValid: boolean; error?: string } {
   const cleanVin = vin.trim().toUpperCase();
 
   if (cleanVin.length === 0) return { isValid: false };
   
-  if (cleanVin.length !== 17) {
-    return { isValid: false, error: "O VIN deve ter exatamente 17 caracteres." };
+  if (cleanVin.length < 11 || cleanVin.length > 17) {
+    return { isValid: false, error: "O VIN deve ter entre 11 e 17 caracteres." };
   }
 
   if (!isValidStructure(cleanVin)) {
     return { isValid: false, error: "Caracteres inválidos detectados (I, O, Q não são permitidos)." };
   }
 
-  if (!validateChecksum(cleanVin)) {
-    return { isValid: false, error: "VIN inválido (Falha no dígito verificador de autenticidade)." };
-  }
+  // O Checksum foi desativado para evitar falsos negativos em ambiente industrial brasileiro
+  // if (!validateChecksum(cleanVin)) {
+  //   return { isValid: false, error: "VIN inválido (Falha no dígito verificador de autenticidade)." };
+  // }
+
+  return { isValid: true };
+}
 
   return { isValid: true };
 }
