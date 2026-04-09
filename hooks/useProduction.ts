@@ -31,27 +31,20 @@ export function useProduction(options?: { allHistory?: boolean }) {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
+      // Query unificada com join de funcionários
       let query = supabase
-        .from('productions')
-        .select('*')
-        .order('timestamp', { ascending: false })
-
-      // If not allHistory, filter for current shift (since 01:00 AM)
-      if (!options?.allHistory) {
-        query = query.gte('timestamp', getShiftStart())
-      }
-
-      const { data, error } = await supabase
         .from('productions')
         .select('*, employees(nome)')
         .order('timestamp', { ascending: false })
 
-      // Manual filtering if we want to be 100% sure about the shift logic in JS
+      if (!options?.allHistory) {
+        query = query.gte('timestamp', getShiftStart())
+      }
+
+      const { data, error } = await query
+
       if (!error && data) {
-        const filtered = options?.allHistory 
-          ? data 
-          : data.filter((p: Production) => p.timestamp >= getShiftStart())
-        setData(filtered)
+        setData(data)
       }
     } catch (err) {
       console.error("Error fetching production:", err)
@@ -64,9 +57,21 @@ export function useProduction(options?: { allHistory?: boolean }) {
     fetchData()
 
     const channel = supabase
-      .channel(`rt_prod_${Math.random().toString(36).substring(7)}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'productions' }, fetchData)
-      .subscribe()
+      .channel('production-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'productions' }, 
+        (payload: any) => {
+          console.log("Mudança detectada no Realtime:", payload);
+          fetchData();
+        }
+      )
+      .subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') {
+          console.log("Inscrito no canal de mudanças da produção com sucesso.");
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error("Erro ao se inscrever no canal de mudanças da produção.");
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel)
@@ -74,18 +79,33 @@ export function useProduction(options?: { allHistory?: boolean }) {
   }, [fetchData, supabase])
 
   const addProduction = async (production: Omit<Production, 'id' | 'timestamp'>) => {
-    // Validação extra antes de enviar ao banco
+    console.log("Iniciando insert de produção:", production);
+    
     const validation = validateVIN(production.vin);
     if (!validation.isValid) {
+      console.warn("VIN Inválido:", production.vin);
       return { error: { message: validation.error || "VIN Inválido", code: 'VIN_INVALID' } };
     }
 
+    // Removendo o timestamp manual para deixar o Supabase usar o DEFAULT now() do banco.
+    // Isso garante consistência mesmo que o relógio do cliente esteja errado.
     const { error } = await supabase
       .from('productions')
-      .insert([production])
+      .insert([{
+        vin: production.vin,
+        employee_id: production.employee_id,
+        versao: production.versao,
+        sync_status: 'Sincronizado'
+      }]);
     
-    if (!error) fetchData()
-    return { error }
+    if (error) {
+      console.error("Erro ao inserir produção no Supabase:", error);
+    } else {
+      console.log("Produção inserida com sucesso!");
+      fetchData(); // Força um refresh local imediato
+    }
+    
+    return { error };
   }
 
   return { data, loading, addProduction, refresh: fetchData }

@@ -31,7 +31,25 @@ export function useEmployees() {
 
   useEffect(() => {
     fetchEmployees()
-  }, [fetchEmployees])
+
+    const channel = supabase
+      .channel('employees-changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'employees' 
+        }, 
+        () => {
+          fetchEmployees()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [fetchEmployees, supabase])
 
   const addEmployee = async (employee: Omit<Employee, 'id'>) => {
     const { data, error } = await supabase

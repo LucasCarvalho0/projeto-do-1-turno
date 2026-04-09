@@ -28,17 +28,20 @@ export function useSettings() {
     fetchSettings()
 
     const channel = supabase
-      .channel(`rt_settings_${Math.random().toString(36).substring(7)}`)
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'settings',
-        filter: 'id=eq.1' 
-      }, (payload: any) => {
-        if (payload.new) {
-          setMeta(payload.new.meta)
+      .channel('settings-changes')
+      .on('postgres_changes', 
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'settings',
+          filter: 'id=eq.1' 
+        }, 
+        (payload: any) => {
+          if (payload.new && typeof payload.new.meta === 'number') {
+            setMeta(payload.new.meta)
+          }
         }
-      })
+      )
       .subscribe()
 
     return () => {

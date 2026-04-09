@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { validateVIN } from "@/utils/vin";
 import { 
   Scan, 
@@ -9,7 +9,10 @@ import {
   Camera, 
   X, 
   CheckCircle2, 
-  AlertCircle 
+  AlertCircle,
+  Zap,
+  ZapOff,
+  RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,50 +25,108 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
   const [mode, setMode] = useState<'input' | 'camera'>('input');
   const [vinInput, setVinInput] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const [isTorchOn, setIsTorchOn] = useState(false);
+  const [activeCamera, setActiveCamera] = useState<'environment' | 'user'>('environment');
+  
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const containerId = "reader";
 
   // Auto-submit quando atinge 17 caracteres
   useEffect(() => {
     const cleanVin = vinInput.trim().toUpperCase();
-    
     if (cleanVin.length === 17) {
       const validation = validateVIN(cleanVin);
       if (validation.isValid) {
         setError(null);
         onScan(cleanVin);
         setVinInput("");
+        if (mode === 'camera') setMode('input');
       } else {
         setError(validation.error || "VIN Inválido");
       }
     } else {
       setError(null);
     }
-  }, [vinInput, onScan]);
+  }, [vinInput, onScan, mode]);
 
-  useEffect(() => {
-    if (mode === 'camera' && !disabled) {
-      scannerRef.current = new Html5QrcodeScanner(
-        "reader", 
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        /* verbose= */ false
-      );
+  const stopScanner = async () => {
+    if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+      try {
+        await html5QrCodeRef.current.stop();
+        html5QrCodeRef.current.clear();
+      } catch (err) {
+        console.error("Failed to stop scanner", err);
+      }
+    }
+  };
 
-      scannerRef.current.render(
+  const startScanner = async () => {
+    try {
+      if (!html5QrCodeRef.current) {
+        // Formatos suportados devem ser configurados no construtor
+        html5QrCodeRef.current = new Html5Qrcode(containerId, {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.DATA_MATRIX
+          ],
+          verbose: false
+        });
+      }
+
+      await html5QrCodeRef.current.start(
+        { facingMode: activeCamera },
+        {
+          fps: 15,
+          qrbox: { width: 280, height: 280 },
+          aspectRatio: 1.0,
+        },
         (decodedText) => {
           setVinInput(decodedText.toUpperCase());
         },
-        (error) => {
-          // Silent error for continuous scanning
+        (errorMessage) => {
+          // Silent failure for continuous scanning
         }
       );
+    } catch (err) {
+      console.error("Scanner start error", err);
+    }
+  };
+
+  useEffect(() => {
+    if (mode === 'camera' && !disabled) {
+      startScanner();
+    } else {
+      stopScanner();
     }
 
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(console.error);
-      }
+      stopScanner();
     };
-  }, [mode, disabled]);
+  }, [mode, disabled, activeCamera]);
+
+  const toggleTorch = async () => {
+    if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+      try {
+        // getRunningTrack pode não estar nos types mas existe em runtime em versões recentes
+        // Fallback para uma abordagem segura
+        const scanner = html5QrCodeRef.current as any;
+        const track = typeof scanner.getRunningTrack === 'function' 
+          ? scanner.getRunningTrack() 
+          : null;
+
+        if (track && 'applyConstraints' in track) {
+          await track.applyConstraints({
+            advanced: [{ torch: !isTorchOn }]
+          });
+          setIsTorchOn(!isTorchOn);
+        }
+      } catch (err) {
+        console.warn("Flashlight not supported on this device", err);
+      }
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toUpperCase().replace(/[IOQ]/g, "");
@@ -80,7 +141,7 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
       if (validation.isValid) {
         onScan(cleanVin);
         setVinInput("");
-        if (mode === 'camera') setMode('input');
+        setMode('input');
       } else {
         setError(validation.error || "VIN Inválido");
       }
@@ -88,7 +149,7 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
   };
 
   return (
-    <div className="w-full flex-1 flex flex-col items-center gap-10">
+    <div className="w-full flex-1 flex flex-col items-center gap-6">
       <div className="flex bg-white/[0.02] p-1 rounded-2xl border border-white/[0.05] w-fit">
         <button
           onClick={() => setMode('input')}
@@ -113,21 +174,72 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
       </div>
 
       <div className="flex-1 w-full flex flex-col items-center justify-center gap-8">
-        {mode === 'camera' ? (
-          <div className="w-full aspect-square max-w-[320px] border-2 border-accent-gold/20 rounded-[2.5rem] overflow-hidden relative shadow-2xl shadow-yellow-500/5">
-             <div id="reader" className="w-full h-full" />
-             <div className="absolute inset-0 pointer-events-none border-[12px] border-[#1a1c1e] rounded-[2.5rem]" />
-             <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="w-48 h-48 border-2 border-accent-gold/40 border-dashed rounded-3xl animate-pulse" />
-             </div>
-             <button 
-               onClick={() => setMode('input')}
-               className="absolute top-4 right-4 p-2 bg-black/60 rounded-xl text-white hover:bg-black z-10 transition-all"
-             >
-               <X className="w-4 h-4" />
-             </button>
+        {mode === 'camera' && (
+          <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-in fade-in duration-300">
+            {/* Scanner Area */}
+            <div className="relative w-full h-full flex items-center justify-center">
+              <div id={containerId} className="w-full h-full object-cover" />
+              
+              {/* Industrial Overlay */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="w-full h-full flex flex-col">
+                  <div className="flex-1 bg-black/60" />
+                  <div className="h-[280px] flex">
+                    <div className="flex-1 bg-black/60" />
+                    <div className="w-[280px] relative">
+                      {/* Detection Target Corner Frames */}
+                      <div className="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-accent-gold rounded-tl-3xl" />
+                      <div className="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-accent-gold rounded-tr-3xl" />
+                      <div className="absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 border-accent-gold rounded-bl-3xl" />
+                      <div className="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-accent-gold rounded-br-3xl" />
+                      
+                      {/* Scanning Line Animation */}
+                      <div className="absolute top-0 left-4 right-4 h-1 bg-accent-gold/50 shadow-[0_0_15px_rgba(250,204,21,0.5)] animate-scan-line-v2" />
+                    </div>
+                    <div className="flex-1 bg-black/60" />
+                  </div>
+                  <div className="flex-1 bg-black/60 flex flex-col items-center justify-center p-8 gap-4">
+                     <p className="text-white font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">
+                        Centralize o Código de Barras
+                     </p>
+                     {error && (
+                        <div className="bg-red-500 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase flex items-center gap-2">
+                           <AlertCircle className="w-3 h-3" />
+                           {error}
+                        </div>
+                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Controls */}
+              <div className="absolute bottom-10 left-0 right-0 flex items-center justify-center gap-6 px-10">
+                <button 
+                  onClick={toggleTorch}
+                  className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white active:scale-95 transition-all border border-white/20"
+                >
+                  {isTorchOn ? <Zap className="w-6 h-6 text-accent-gold" /> : <ZapOff className="w-6 h-6" />}
+                </button>
+
+                <button 
+                  onClick={() => setMode('input')}
+                  className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-white active:scale-95 transition-all shadow-xl shadow-red-500/20"
+                >
+                  <X className="w-8 h-8" />
+                </button>
+
+                <button 
+                  onClick={() => setActiveCamera(prev => prev === 'environment' ? 'user' : 'environment')}
+                  className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white active:scale-95 transition-all border border-white/20"
+                >
+                  <RefreshCw className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
           </div>
-        ) : (
+        )}
+
+        {mode === 'input' && (
           <div className="w-full max-w-sm space-y-6">
             <div className="relative group">
               <input
@@ -172,7 +284,7 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
       </div>
 
       <p className="text-[10px] uppercase font-black tracking-[0.3em] text-slate-700 text-center">
-        {mode === 'camera' ? "Posicione o QR/Código de Barras no centro" : "O sistema salvará automaticamente ao atingir 17 caracteres"}
+        {mode === 'camera' ? "Aponte para o código de barras do veículo" : "O sistema salvará automaticamente ao atingir 17 caracteres"}
       </p>
     </div>
   );

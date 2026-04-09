@@ -32,7 +32,7 @@ export function ProgressMeta({ total = 90 }: { total: number }) {
           </div>
 
           <div className="space-y-1 text-right">
-             <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Meta: {total}</span>
+             <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Meta: {total} carros</span>
           </div>
         </div>
 

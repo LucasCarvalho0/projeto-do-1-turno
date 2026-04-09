@@ -32,14 +32,17 @@ export default function ConfiguracoesPage() {
 
   const handleSave = async () => {
     setLoading(true);
+    // Usamos upsert para garantir que o registro ID 1 exista ou seja atualizado
     const { error } = await supabase
       .from('settings')
-      .update({ meta })
-      .eq('id', 1); // Assuming ID 1 for global settings
+      .upsert({ id: 1, meta }, { onConflict: 'id' });
 
     if (!error) {
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
+    } else {
+      console.error("Erro ao salvar:", error);
+      alert("Erro ao salvar configurações no banco de dados.");
     }
     setLoading(false);
   };

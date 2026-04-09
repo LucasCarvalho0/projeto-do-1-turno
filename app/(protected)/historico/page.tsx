@@ -32,15 +32,28 @@ export default function HistoricoPage() {
   const [endDate, setEndDate] = useState(format(endOfDay(new Date()), 'yyyy-MM-dd'));
 
   const filteredData = useMemo(() => {
+    console.log(`Filtrando histórico: ${startDate} até ${endDate}. Total original: ${productions.length}`);
+    
     return productions.filter(item => {
-      const itemDate = parseISO(item.timestamp);
-      const isDateInRange = isWithinInterval(itemDate, {
-        start: startOfDay(new Date(startDate)),
-        end: endOfDay(new Date(endDate))
-      });
-      const matchesSearch = item.vin.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            item.versao.toLowerCase().includes(searchTerm.toLowerCase());
-      return isDateInRange && matchesSearch;
+      try {
+        const itemDate = parseISO(item.timestamp);
+        
+        // Convertemos as datas de início e fim para objetos Date locais no início/fim do dia
+        // O input type="date" retorna "YYYY-MM-DD"
+        // Adicionamos o horário explicitamente para evitar ambiguidades de fuso horário na criação do objeto Date
+        const start = startOfDay(new Date(startDate + 'T00:00:00'));
+        const end = endOfDay(new Date(endDate + 'T23:59:59'));
+
+        const isDateInRange = isWithinInterval(itemDate, { start, end });
+        
+        const matchesSearch = item.vin.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              item.versao.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        return isDateInRange && matchesSearch;
+      } catch (err) {
+        console.error("Erro ao processar item do histórico:", item, err);
+        return false;
+      }
     });
   }, [productions, startDate, endDate, searchTerm]);
 

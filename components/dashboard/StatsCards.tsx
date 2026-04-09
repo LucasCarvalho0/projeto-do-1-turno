@@ -27,7 +27,7 @@ export function StatsCards({ meta = 90 }: { meta: number }) {
     {
       title: "META DO TURNO",
       value: meta.toString(),
-      label: `${meta - countToday} restantes`,
+      label: `${Math.max(0, meta - countToday)} restantes`,
       icon: Target,
       color: "text-accent-purple",
       border: "border-t-accent-purple",

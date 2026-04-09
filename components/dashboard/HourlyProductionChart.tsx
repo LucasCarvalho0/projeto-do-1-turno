@@ -16,11 +16,18 @@ import { parseISO, getHours } from 'date-fns';
 export function HourlyProductionChart() {
   const { data: productions, loading } = useProduction();
 
-  const hours = Array.from({ length: 11 }, (_, i) => i + 6); 
+  // Lista de horas do turno (06:00 até 01:00 do dia seguinte)
+  const hours = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1]; 
+  
   const chartData = hours.map(h => {
     const count = productions.filter(p => {
-      const date = parseISO(p.timestamp);
-      return getHours(date) === h;
+      try {
+        const date = parseISO(p.timestamp);
+        // getHours retorna a hora local, o que é correto pois o painel é físico e local.
+        return getHours(date) === h;
+      } catch (err) {
+        return false;
+      }
     }).length;
     
     return {
@@ -30,7 +37,13 @@ export function HourlyProductionChart() {
     };
   });
 
-  if (loading) return null;
+  console.log("Chart Data recalculado:", chartData.filter(d => d.count > 0));
+
+  if (loading && productions.length === 0) return (
+    <div className="h-full w-full flex items-center justify-center">
+      <div className="w-6 h-6 border-2 border-accent-gold border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   return (
     <ResponsiveContainer width="100%" height="100%">
