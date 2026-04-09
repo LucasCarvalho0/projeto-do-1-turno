@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { format } from "date-fns";
 import { 
   ScanLine, 
   Users, 
@@ -32,7 +33,7 @@ export default function RegistrarMontagemPage() {
 
     setStatus('loading');
     
-    const { error } = await addProduction({
+    const { error, existingTimestamp } = await addProduction({
       vin,
       employee_id: employee,
       versao: version
@@ -41,7 +42,13 @@ export default function RegistrarMontagemPage() {
     if (error) {
       playErrorSound();
       setStatus('error');
-      setMessage(error.code === '23505' ? "VIN JÁ CADASTRADO!" : "ERRO AO REGISTRAR NO BANCO.");
+      
+      if (error.code === '23505' && existingTimestamp) {
+        const date = new Date(existingTimestamp);
+        setMessage(`VIN JÁ CADASTRADO EM ${format(date, 'dd/MM/yyyy')} ÀS ${format(date, 'HH:mm:ss')}`);
+      } else {
+        setMessage(error.code === '23505' ? "VIN JÁ CADASTRADO!" : "ERRO AO REGISTRAR NO BANCO.");
+      }
     } else {
       playSuccessSound();
       setStatus('success');

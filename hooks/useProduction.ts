@@ -100,6 +100,17 @@ export function useProduction(options?: { allHistory?: boolean }) {
     
     if (error) {
       console.error("Erro ao inserir produção no Supabase:", error);
+      
+      // Se for erro de duplicidade (unique constraint), buscar o registro existente
+      if (error.code === '23505') {
+        const { data: existingData } = await supabase
+          .from('productions')
+          .select('timestamp')
+          .eq('vin', production.vin)
+          .single();
+        
+        return { error, existingTimestamp: existingData?.timestamp };
+      }
     } else {
       console.log("Produção inserida com sucesso!");
       fetchData(); // Força um refresh local imediato
