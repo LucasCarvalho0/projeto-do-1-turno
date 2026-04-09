@@ -28,7 +28,7 @@ export function useSettings() {
     fetchSettings()
 
     const channel = supabase
-      .channel('settings-changes')
+      .channel(`settings-changes-${Math.random().toString(36).substring(2, 9)}`)
       .on('postgres_changes', 
         { 
           event: 'UPDATE', 

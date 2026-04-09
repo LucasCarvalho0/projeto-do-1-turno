@@ -57,7 +57,7 @@ export function useProduction(options?: { allHistory?: boolean }) {
     fetchData()
 
     const channel = supabase
-      .channel('production-changes')
+      .channel(`production-changes-${Math.random().toString(36).substring(2, 9)}`)
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'productions' }, 
         (payload: any) => {

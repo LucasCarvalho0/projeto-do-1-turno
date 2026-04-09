@@ -33,7 +33,7 @@ export function useEmployees() {
     fetchEmployees()
 
     const channel = supabase
-      .channel('employees-changes')
+      .channel(`employees-changes-${Math.random().toString(36).substring(2, 9)}`)
       .on('postgres_changes', 
         { 
           event: '*', 
