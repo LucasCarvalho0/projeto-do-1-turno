@@ -112,7 +112,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             {user?.nome?.slice(0, 2).toUpperCase() || "UN"}
           </div>
           <div>
-            <p className="text-sm font-bold text-white leading-none mb-1">{user?.nome || "Carregando..."}</p>
+            <p className="text-sm font-bold text-white leading-none mb-1">
+              {user?.matricula === '116203' ? 'Anna Karolina' : (user?.nome || "Carregando...")}
+            </p>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
                 {user?.matricula === '116203' ? 'Administrativo' : (user?.tipo || 'Operador')}
             </p>

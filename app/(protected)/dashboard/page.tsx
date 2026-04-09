@@ -16,7 +16,12 @@ export default function DashboardPage() {
     const session = localStorage.getItem('session_user');
     if (session) {
       const user = JSON.parse(session);
-      setUserName(user.nome);
+      // Forçar o nome correto para a administradora se necessário
+      if (user.matricula === '116203') {
+        setUserName("Anna Karolina");
+      } else {
+        setUserName(user.nome);
+      }
     }
   }, []);
 
