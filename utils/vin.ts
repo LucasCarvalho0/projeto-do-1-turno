@@ -58,6 +58,3 @@ export function validateVIN(vin: string): { isValid: boolean; error?: string } {
 
   return { isValid: true };
 }
-
-  return { isValid: true };
-}
