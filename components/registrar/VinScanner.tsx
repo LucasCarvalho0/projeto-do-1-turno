@@ -12,9 +12,11 @@ import {
   AlertCircle,
   Zap,
   ZapOff,
-  RefreshCw
+  RefreshCw,
+  Target
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { playSuccessSound, playErrorSound } from "@/utils/sound";
 
 interface VinScannerProps {
   onScan: (vin: string) => void;
@@ -28,6 +30,7 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [isTorchOn, setIsTorchOn] = useState(false);
   const [activeCamera, setActiveCamera] = useState<'environment' | 'user'>('environment');
+  const [isSuccessCaptured, setIsSuccessCaptured] = useState(false);
   
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const containerId = "reader";
@@ -80,15 +83,36 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
       await html5QrCodeRef.current.start(
         { facingMode: activeCamera },
         {
-          fps: 20,
-          qrbox: { width: 280, height: 150 }, // Geometria mais retangular para VIN
+          fps: 25, // Maior FPS para sensação de "collector"
+          qrbox: { width: 300, height: 160 },
           aspectRatio: 1.0,
         },
         (decodedText) => {
           const clean = decodedText.toUpperCase().slice(0, 17);
-          setVinInput(clean);
-          setVinConfirm(""); // Limpa confirmação ao escanear novo
-          if (clean.length === 17) setMode('input');
+          const validation = validateVIN(clean);
+          
+          if (clean.length === 17 && validation.isValid) {
+            // FEEDBACK INDUSTRIAL
+            playSuccessSound();
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            
+            setIsSuccessCaptured(true);
+            setVinInput(clean);
+            setVinConfirm(clean); // Auto-fill para bypass de confirmação
+            
+            // Auto-submit após breve delay visual
+            setTimeout(() => {
+              onScan(clean);
+              setVinInput("");
+              setVinConfirm("");
+              setMode('input');
+              setIsSuccessCaptured(false);
+              setError(null);
+            }, 800);
+          } else if (clean.length === 17 && !validation.isValid) {
+             playErrorSound();
+             setError(validation.error || "VIN Inválido");
+          }
         },
         (errorMessage) => {
           // Silent failure for continuous scanning
@@ -172,7 +196,7 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
           )}
         >
           <Camera className="w-4 h-4" />
-          Câmera Celular
+          Câmera Coletora
         </button>
       </div>
 
@@ -182,6 +206,16 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
             <div className="relative w-full h-full flex items-center justify-center">
               <div id={containerId} className="w-full h-full object-cover" />
               
+              {/* MODO SUCESSO COLETOR */}
+              {isSuccessCaptured && (
+                <div className="absolute inset-0 z-50 bg-green-500/30 backdrop-blur-sm flex flex-col items-center justify-center animate-in zoom-in duration-300">
+                   <div className="w-32 h-32 rounded-full bg-green-500 flex items-center justify-center shadow-[0_0_50px_rgba(34,197,94,0.5)]">
+                      <CheckCircle2 className="w-20 h-20 text-white" />
+                   </div>
+                   <p className="mt-8 text-2xl font-black text-white uppercase tracking-[0.3em]">VIN COLETADO</p>
+                </div>
+              )}
+
               <div className="absolute inset-0 pointer-events-none">
                 <div className="w-full h-full flex flex-col">
                   <div className="flex-1 bg-black/60" />
@@ -195,38 +229,48 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
                       <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-accent-gold rounded-br-xl" />
                       
                       {/* Scanning Line Animation */}
-                      <div className="absolute left-0 right-0 h-[2px] bg-accent-gold shadow-[0_0_15px_rgba(250,204,21,0.8)] animate-scan-line-v2 z-10" />
+                      <div className="absolute left-0 right-0 h-[2px] bg-accent-gold shadow-[0_0_20px_rgba(250,204,21,1)] animate-scan-line-v2 z-10" />
                     </div>
                     <div className="flex-1 bg-black/60" />
                   </div>
                   <div className="flex-1 bg-black/60 flex flex-col items-center justify-center p-8 gap-4">
-                     <p className="text-white font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">
-                        Centralize o VIN do Veículo
-                     </p>
+                     <div className="flex items-center gap-3 px-6 py-2 bg-accent-gold/10 border border-accent-gold/20 rounded-full">
+                        <Target className="w-4 h-4 text-accent-gold animate-pulse" />
+                        <p className="text-accent-gold font-black uppercase tracking-[0.3em] text-[10px]">
+                           Modo Coletor Nissan Ativo
+                        </p>
+                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="absolute bottom-10 left-0 right-0 flex items-center justify-center gap-6 px-10">
+              {/* Controles Maiores para Uso Industrial */}
+              <div className="absolute bottom-12 left-0 right-0 flex items-center justify-center gap-10 px-10">
                 <button 
                   onClick={toggleTorch}
-                  className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white active:scale-95 transition-all border border-white/20"
+                  className={cn(
+                    "w-20 h-20 rounded-full flex flex-col items-center justify-center gap-1 active:scale-90 transition-all border-2",
+                    isTorchOn 
+                      ? "bg-accent-gold border-accent-gold text-black shadow-[0_0_30px_rgba(250,204,21,0.4)]" 
+                      : "bg-white/10 backdrop-blur-md border-white/20 text-white"
+                  )}
                 >
-                  {isTorchOn ? <Zap className="w-6 h-6 text-accent-gold" /> : <ZapOff className="w-6 h-6" />}
+                  {isTorchOn ? <Zap className="w-8 h-8 fill-current" /> : <ZapOff className="w-8 h-8" />}
+                  <span className="text-[8px] font-black uppercase">Flash</span>
                 </button>
 
                 <button 
                   onClick={() => setMode('input')}
-                  className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-white active:scale-95 transition-all shadow-xl shadow-red-500/20"
+                  className="w-20 h-20 rounded-full bg-red-600 flex items-center justify-center text-white active:scale-90 transition-all shadow-2xl shadow-red-600/30 border-2 border-red-500/50"
                 >
-                  <X className="w-8 h-8" />
+                  <X className="w-10 h-10" />
                 </button>
 
                 <button 
                   onClick={() => setActiveCamera(prev => prev === 'environment' ? 'user' : 'environment')}
-                  className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white active:scale-95 transition-all border border-white/20"
+                  className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white active:scale-90 transition-all border-2 border-white/20"
                 >
-                  <RefreshCw className="w-6 h-6" />
+                  <RefreshCw className="w-8 h-8" />
                 </button>
               </div>
             </div>
