@@ -176,7 +176,7 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
   };
 
   return (
-    <div className="w-full flex-1 flex flex-col items-center gap-6">
+    <div className="w-full flex-1 flex flex-col items-center gap-6 mt-12 md:mt-20">
       <div className="flex bg-white/[0.02] p-1 rounded-2xl border border-white/[0.05] w-fit">
         <button
           onClick={() => setMode('input')}

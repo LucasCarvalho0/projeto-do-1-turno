@@ -122,7 +122,7 @@ export default function RegistrarMontagemPage() {
             "card-premium p-10 h-full flex flex-col items-center justify-center min-h-[600px] relative transition-all duration-500",
             status === 'success' ? "border-green-500" : status === 'error' ? "border-red-500" : ""
           )}>
-            <div className="absolute top-8 left-8 flex items-center gap-2">
+            <div className="absolute top-12 left-1/2 -translate-x-1/2 flex items-center gap-2 whitespace-nowrap">
                <ScanLine className="text-slate-700 w-4 h-4" />
                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-700 italic">Bipagem Estação 01</span>
             </div>
