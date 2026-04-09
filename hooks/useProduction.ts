@@ -103,12 +103,18 @@ export function useProduction(options?: { allHistory?: boolean }) {
       
       // Se for erro de duplicidade (unique constraint), buscar o registro existente
       if (error.code === '23505') {
-        const { data: existingData } = await supabase
+        console.warn("VIN já existe no banco. Buscando data do registro original...");
+        const { data: existingData, error: fetchError } = await supabase
           .from('productions')
           .select('timestamp')
           .eq('vin', production.vin)
           .single();
         
+        if (fetchError) {
+          console.error("Erro ao buscar timestamp do registro existente:", fetchError);
+        }
+
+        console.log("Data encontrada:", existingData?.timestamp);
         return { error, existingTimestamp: existingData?.timestamp };
       }
     } else {

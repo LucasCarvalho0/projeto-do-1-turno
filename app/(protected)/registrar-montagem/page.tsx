@@ -45,9 +45,9 @@ export default function RegistrarMontagemPage() {
       
       if (error.code === '23505' && existingTimestamp) {
         const date = new Date(existingTimestamp);
-        setMessage(`VIN JÁ CADASTRADO EM ${format(date, 'dd/MM/yyyy')} ÀS ${format(date, 'HH:mm:ss')}`);
+        setMessage(`FALHA NO REGISTRO: VIN JÁ CADASTRADO EM ${format(date, 'dd/MM/yyyy')} ÀS ${format(date, 'HH:mm:ss')}`);
       } else {
-        setMessage(error.code === '23505' ? "VIN JÁ CADASTRADO!" : "ERRO AO REGISTRAR NO BANCO.");
+        setMessage(error.code === '23505' ? "FALHA: VIN JÁ CADASTRADO!" : "ERRO AO REGISTRAR NO BANCO.");
       }
     } else {
       playSuccessSound();
