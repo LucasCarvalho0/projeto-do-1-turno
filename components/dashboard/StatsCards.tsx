@@ -24,9 +24,15 @@ export function StatsCards() {
   const now = new Date();
   const today = startOfToday();
   
-  // Parse dos tempos de início e fim
-  const startStr = turnoInicio || "06:00";
-  const endStr = turnoFim || "16:48";
+  // Parse dos tempos de início e fim (tratando formatos HH:mm:ss do banco)
+  const formatTimeStr = (t: string) => {
+    if (!t) return "00:00";
+    const [h, m] = t.split(':');
+    return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+  };
+
+  const startStr = formatTimeStr(turnoInicio || "06:00");
+  const endStr = formatTimeStr(turnoFim || "16:48");
   
   const startTime = parse(startStr, 'HH:mm', today);
   let endTime = parse(endStr, 'HH:mm', today);
