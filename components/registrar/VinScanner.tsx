@@ -100,11 +100,8 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
             setVinInput(clean);
             setVinConfirm(clean); // Auto-fill para bypass de confirmação
             
-            // Auto-submit após breve delay visual
+            // Agora apenas fecha a câmera e deixa os dados preenchidos para confirmação manual
             setTimeout(() => {
-              onScan(clean);
-              setVinInput("");
-              setVinConfirm("");
               setMode('input');
               setIsSuccessCaptured(false);
               setError(null);
@@ -159,6 +156,7 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
     const value = e.target.value.toUpperCase().replace(/[IOQ]/g, "").slice(0, 17);
     if (field === 'original') {
       setVinInput(value);
+      setVinConfirm(value); // Preenchimento automático solicitado pelo usuário
     } else {
       setVinConfirm(value);
     }
