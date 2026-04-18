@@ -26,37 +26,60 @@ export function StatsCards() {
   
   // Parse dos tempos de início e fim (tratando formatos HH:mm:ss do banco)
   const formatTimeStr = (t: string) => {
-    if (!t) return "00:00";
-    const [h, m] = t.split(':');
-    return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+    if (!t || typeof t !== 'string') return "06:00";
+    const parts = t.split(':');
+    if (parts.length < 2) return "06:00";
+    const h = parts[0].padStart(2, '0');
+    const m = parts[1].padStart(2, '0');
+    return `${h}:${m}`;
   };
 
-  const startStr = formatTimeStr(turnoInicio || "06:00");
+  const startStr = formatTimeStr(turnoInicio);
   const endStr = formatTimeStr(turnoFim || "16:48");
   
   const startTime = parse(startStr, 'HH:mm', today);
   let endTime = parse(endStr, 'HH:mm', today);
   
-  // Se o fim for antes do início, assume que termina no dia seguinte
-  if (isAfter(startTime, endTime)) {
-    endTime = addDays(endTime, 1);
+  // Garantir que as datas são válidas
+  const isValidStart = !isNaN(startTime.getTime());
+  const isValidEnd = !isNaN(endTime.getTime());
+
+  if (isValidStart && isValidEnd) {
+    if (isAfter(startTime, endTime)) {
+      endTime = addDays(endTime, 1);
+    }
+
+    const totalMinutes = differenceInMinutes(endTime, startTime);
+    const elapsedMinutes = Math.max(0, differenceInMinutes(now, startTime));
+    const elapsedHours = elapsedMinutes / 60;
+    
+    const hoursElapsed = Math.floor(elapsedMinutes / 60);
+    const minsElapsed = elapsedMinutes % 60;
+    
+    const averagePerHour = elapsedHours > 0 ? (countToday / elapsedHours).toFixed(1) : "0.0";
+    const targetPerHour = totalMinutes > 0 ? (meta / (totalMinutes / 60)) : 10;
+    const isAboveAverage = parseFloat(averagePerHour) >= targetPerHour;
+    const timeDisplay = `${hoursElapsed.toString().padStart(2, '0')}:${minsElapsed.toString().padStart(2, '0')}`;
+    
+    return { timeDisplay, averagePerHour, isAboveAverage, startStr, targetPerHour };
   }
 
-  const totalMinutes = differenceInMinutes(endTime, startTime);
-  const elapsedMinutes = Math.max(0, differenceInMinutes(now, startTime));
-  const elapsedHours = elapsedMinutes / 60;
-  
-  // Média por hora real
-  const averagePerHour = elapsedHours > 0 ? (countToday / elapsedHours).toFixed(1) : "0.0";
-  
-  // Meta por hora esperada
-  const targetPerHour = totalMinutes > 0 ? (meta / (totalMinutes / 60)) : 10;
-  const isAboveAverage = parseFloat(averagePerHour) >= targetPerHour;
+  return { timeDisplay: "00:00", averagePerHour: "0.0", isAboveAverage: false, startStr: "06:00", targetPerHour: 10 };
+}
 
-  // Formatação do tempo decorrido
-  const hoursElapsed = Math.floor(elapsedMinutes / 60);
-  const minsElapsed = elapsedMinutes % 60;
-  const timeDisplay = `${hoursElapsed.toString().padStart(2, '0')}:${minsElapsed.toString().padStart(2, '0')}`;
+export function StatsCards() {
+  const { data: productions, loading: pLoad } = useProduction();
+  const { meta, turnoInicio, turnoFim, loading: sLoad } = useSettings();
+  
+  const loading = pLoad || sLoad;
+  const countToday = productions.length;
+
+  const { timeDisplay, averagePerHour, isAboveAverage, startStr } = calculateStats(
+    countToday, 
+    meta, 
+    turnoInicio, 
+    turnoFim
+  );
 
   const stats = [
     {
