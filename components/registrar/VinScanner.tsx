@@ -105,13 +105,12 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
       await html5QrCodeRef.current.start(
         { facingMode: activeCamera },
         {
-          fps: 30, // Aumentado para maior fluidez
-          qrbox: { width: 320, height: 120 }, // Perfil mais horizontal para códigos lineares
+          fps: 30,
+          qrbox: { width: 350, height: 100 }, // Área mais estreita para focar apenas no código de barras
           aspectRatio: 1.0,
           videoConstraints: {
             facingMode: activeCamera,
             focusMode: 'continuous',
-            // Mudança para 'ideal' sem 'min' para evitar erro em dispositivos que não suportam HD
             width: { ideal: 1280 },
             height: { ideal: 720 }
           } as any
@@ -121,23 +120,19 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
           const validation = validateVIN(clean);
           
           if (clean.length === 17 && validation.isValid) {
-            // FEEDBACK INDUSTRIAL
+            // SÓ PROCESSA SE FOR UM VIN VÁLIDO - FILTRO DE RUÍDO
             playSuccessSound();
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
             
             setIsSuccessCaptured(true);
             setVinInput(clean);
-            setVinConfirm(clean); // Auto-fill para bypass de confirmação
+            setVinConfirm(clean);
             
-            // Agora apenas fecha a câmera e deixa os dados preenchidos para confirmação manual
             setTimeout(() => {
               setMode('input');
               setIsSuccessCaptured(false);
               setError(null);
             }, 800);
-          } else if (clean.length === 17 && !validation.isValid) {
-             playErrorSound();
-             setError(validation.error || "VIN Inválido");
           }
         },
         (errorMessage) => {
@@ -270,16 +265,16 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
                       <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-accent-gold rounded-bl-xl" />
                       <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-accent-gold rounded-br-xl" />
                       
-                      {/* Scanning Line Animation */}
-                      <div className="absolute left-0 right-0 h-[2px] bg-accent-gold shadow-[0_0_20px_rgba(250,204,21,1)] animate-scan-line-v2 z-10" />
+                      {/* Scanning Laser Line */}
+                      <div className="animate-scan-line-laser" />
                     </div>
                     <div className="flex-1 bg-black/60" />
                   </div>
                   <div className="flex-1 bg-black/60 flex flex-col items-center justify-center p-8 gap-4">
-                     <div className="flex items-center gap-3 px-6 py-2 bg-accent-gold/10 border border-accent-gold/20 rounded-full">
-                        <Target className="w-4 h-4 text-accent-gold animate-pulse" />
-                        <p className="text-accent-gold font-black uppercase tracking-[0.3em] text-[10px]">
-                           Modo Coletor Nissan Ativo
+                     <div className="flex items-center gap-3 px-6 py-2 bg-red-500/10 border border-red-500/20 rounded-full">
+                        <Target className="w-4 h-4 text-red-500 animate-pulse" />
+                        <p className="text-red-500 font-black uppercase tracking-[0.3em] text-[10px]">
+                           Mira Laser Ativa - Estabilize o Código
                         </p>
                      </div>
                   </div>
