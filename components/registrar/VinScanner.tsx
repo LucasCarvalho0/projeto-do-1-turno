@@ -106,7 +106,7 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
         { facingMode: activeCamera },
         {
           fps: 30,
-          qrbox: { width: 350, height: 100 }, // Área mais estreita para focar apenas no código de barras
+          qrbox: { width: 350, height: 120 }, 
           aspectRatio: 1.0,
           videoConstraints: {
             facingMode: activeCamera,
@@ -120,7 +120,6 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
           const validation = validateVIN(clean);
           
           if (clean.length === 17 && validation.isValid) {
-            // SÓ PROCESSA SE FOR UM VIN VÁLIDO - FILTRO DE RUÍDO
             playSuccessSound();
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
             
@@ -142,7 +141,6 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
     } catch (err: any) {
       console.error("Scanner start error", err);
       setError(err.message || "Erro ao acessar a câmera. Verifique as permissões.");
-      // Se falhar em iniciar, volta para o modo input após 3 segundos
       setTimeout(() => setMode('input'), 3000);
     } finally {
       isTransitioning.current = false;
@@ -185,7 +183,7 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
     const value = e.target.value.toUpperCase().replace(/[IOQ]/g, "").slice(0, 17);
     if (field === 'original') {
       setVinInput(value);
-      setVinConfirm(value); // Preenchimento automático solicitado pelo usuário
+      setVinConfirm(value); 
     } else {
       setVinConfirm(value);
     }
@@ -198,7 +196,6 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
       setVinInput("");
       setVinConfirm("");
       setError(null);
-      // Mantém o modo input focado após submissão
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
@@ -240,76 +237,73 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
       <div className="flex-1 w-full flex flex-col items-center justify-center gap-6">
         {mode === 'camera' && (
           <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-in fade-in duration-300">
-            <div className="relative w-full h-full flex items-center justify-center">
+            <div className="relative w-full h-full">
+              {/* O vídeo do scanner preenche a tela */}
               <div id={containerId} className="w-full h-full object-cover" />
               
-              {/* MODO SUCESSO COLETOR */}
-              {isSuccessCaptured && (
-                <div className="absolute inset-0 z-50 bg-green-500/30 backdrop-blur-sm flex flex-col items-center justify-center animate-in zoom-in duration-300">
-                   <div className="w-32 h-32 rounded-full bg-green-500 flex items-center justify-center shadow-[0_0_50px_rgba(34,197,94,0.5)]">
-                      <CheckCircle2 className="w-20 h-20 text-white" />
-                   </div>
-                   <p className="mt-8 text-2xl font-black text-white uppercase tracking-[0.3em]">VIN COLETADO</p>
-                </div>
-              )}
-
-              <div className="absolute inset-0 pointer-events-none">
-                <div className="w-full h-full flex flex-col">
-                  <div className="flex-1 bg-black/60" />
-                  <div className="h-[180px] flex">
-                    <div className="flex-1 bg-black/60" />
-                    <div className="w-[320px] relative border-2 border-accent-gold/20 flex items-center justify-center overflow-hidden">
-                      {/* Detection Target Corner Frames */}
-                      <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-accent-gold rounded-tl-xl" />
-                      <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-accent-gold rounded-tr-xl" />
-                      <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-accent-gold rounded-bl-xl" />
-                      <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-accent-gold rounded-br-xl" />
-                      
-                      {/* Scanning Laser Line */}
-                      <div className="animate-scan-line-laser" />
-                    </div>
-                    <div className="flex-1 bg-black/60" />
-                  </div>
-                  <div className="flex-1 bg-black/60 flex flex-col items-center justify-center p-8 gap-4">
-                     <div className="flex items-center gap-3 px-6 py-2 bg-red-500/10 border border-red-500/20 rounded-full">
-                        <Target className="w-4 h-4 text-red-500 animate-pulse" />
-                        <p className="text-red-500 font-black uppercase tracking-[0.3em] text-[10px]">
-                           Mira Laser Ativa - Estabilize o Código
-                        </p>
-                     </div>
-                  </div>
+              {/* Máscara de Scanner Profissional */}
+              <div className="scanner-mask pointer-events-none">
+                <div className="scanner-cutout">
+                  {/* Linha Laser Neon - Garantidamente no topo do recorte */}
+                  <div className="animate-scan-line-laser" />
+                  
+                  {/* Mira nos cantos do recorte */}
+                  <div className="scanner-corner top-0 left-0 border-r-0 border-b-0 rounded-tl-xl" />
+                  <div className="scanner-corner top-0 right-0 border-l-0 border-b-0 rounded-tr-xl" />
+                  <div className="scanner-corner bottom-0 left-0 border-r-0 border-t-0 rounded-bl-xl" />
+                  <div className="scanner-corner bottom-0 right-0 border-l-0 border-t-0 rounded-br-xl" />
                 </div>
               </div>
 
-              {/* Controles Maiores para Uso Industrial */}
-              <div className="absolute bottom-12 left-0 right-0 flex items-center justify-center gap-10 px-10">
+              {/* Informações de Status */}
+              <div className="absolute top-12 left-0 right-0 z-[60] flex flex-col items-center gap-4 pointer-events-none">
+                <div className="px-6 py-2 bg-black/40 backdrop-blur-md border border-white/10 rounded-full flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Mira Laser Vermelha Ativa</p>
+                </div>
+                <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest text-center px-10">
+                  Posicione o código de barras no centro do retângulo
+                </p>
+              </div>
+
+              {/* Botões de Controle Premium (Glassmorphism) */}
+              <div className="absolute bottom-12 left-0 right-0 z-[60] flex items-center justify-center gap-8 px-10">
                 <button 
                   onClick={toggleTorch}
                   className={cn(
-                    "w-20 h-20 rounded-full flex flex-col items-center justify-center gap-1 active:scale-90 transition-all border-2",
+                    "w-16 h-16 rounded-full flex items-center justify-center backdrop-blur-xl border-2 transition-all active:scale-90",
                     isTorchOn 
-                      ? "bg-accent-gold border-accent-gold text-black shadow-[0_0_30px_rgba(250,204,21,0.4)]" 
-                      : "bg-white/10 backdrop-blur-md border-white/20 text-white"
+                      ? "bg-accent-gold border-accent-gold text-black shadow-lg shadow-yellow-500/40" 
+                      : "bg-white/10 border-white/20 text-white hover:bg-white/20"
                   )}
                 >
-                  {isTorchOn ? <Zap className="w-8 h-8 fill-current" /> : <ZapOff className="w-8 h-8" />}
-                  <span className="text-[8px] font-black uppercase">Flash</span>
+                  {isTorchOn ? <Zap className="w-6 h-6 fill-current" /> : <ZapOff className="w-6 h-6" />}
                 </button>
 
                 <button 
                   onClick={() => setMode('input')}
-                  className="w-20 h-20 rounded-full bg-red-600 flex items-center justify-center text-white active:scale-90 transition-all shadow-2xl shadow-red-600/30 border-2 border-red-500/50"
+                  className="w-20 h-20 rounded-full bg-red-600/90 backdrop-blur-md flex items-center justify-center text-white border-4 border-white/10 active:scale-90 transition-all shadow-2xl"
                 >
                   <X className="w-10 h-10" />
                 </button>
 
                 <button 
                   onClick={() => setActiveCamera(prev => prev === 'environment' ? 'user' : 'environment')}
-                  className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white active:scale-90 transition-all border-2 border-white/20"
+                  className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center text-white border-2 border-white/20 active:scale-90 transition-all hover:bg-white/20"
                 >
-                  <RefreshCw className="w-8 h-8" />
+                  <RefreshCw className="w-6 h-6" />
                 </button>
               </div>
+
+              {/* Modo Sucesso Overlay */}
+              {isSuccessCaptured && (
+                <div className="absolute inset-0 z-[100] bg-green-500/40 backdrop-blur-md flex flex-col items-center justify-center animate-in zoom-in duration-300">
+                   <div className="w-32 h-32 rounded-full bg-green-500 flex items-center justify-center shadow-2xl">
+                      <CheckCircle2 className="w-20 h-20 text-white" />
+                   </div>
+                   <p className="mt-8 text-3xl font-black text-white uppercase tracking-[0.4em] italic">VIN CAPTURADO</p>
+                </div>
+              )}
             </div>
           </div>
         )}
