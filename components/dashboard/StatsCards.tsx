@@ -5,26 +5,18 @@ import {
   CheckCircle2, 
   Target, 
   Clock,
-  TrendingDown,
   BarChart3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { useSettings } from "@/hooks/useSettings";
-import { parse, differenceInMinutes, format, startOfToday, isAfter, addDays } from "date-fns";
+import { parse, differenceInMinutes, startOfToday, isAfter, addDays } from "date-fns";
 
-export function StatsCards() {
-  const { data: productions, loading: pLoad } = useProduction();
-  const { meta, turnoInicio, turnoFim, loading: sLoad } = useSettings();
-  
-  const loading = pLoad || sLoad;
-  const countToday = productions.length;
-
-  // Cálculos de Tempo e Produtividade
+// Função utilitária para calcular as estatísticas fora do componente para maior clareza e evitar NaN
+function calculateStats(countToday: number, meta: number, turnoInicio: string, turnoFim: string) {
   const now = new Date();
   const today = startOfToday();
   
-  // Parse dos tempos de início e fim (tratando formatos HH:mm:ss do banco)
   const formatTimeStr = (t: string) => {
     if (!t || typeof t !== 'string') return "06:00";
     const parts = t.split(':');
@@ -40,7 +32,6 @@ export function StatsCards() {
   const startTime = parse(startStr, 'HH:mm', today);
   let endTime = parse(endStr, 'HH:mm', today);
   
-  // Garantir que as datas são válidas
   const isValidStart = !isNaN(startTime.getTime());
   const isValidEnd = !isNaN(endTime.getTime());
 
@@ -61,10 +52,10 @@ export function StatsCards() {
     const isAboveAverage = parseFloat(averagePerHour) >= targetPerHour;
     const timeDisplay = `${hoursElapsed.toString().padStart(2, '0')}:${minsElapsed.toString().padStart(2, '0')}`;
     
-    return { timeDisplay, averagePerHour, isAboveAverage, startStr, targetPerHour };
+    return { timeDisplay, averagePerHour, isAboveAverage, startStr };
   }
 
-  return { timeDisplay: "00:00", averagePerHour: "0.0", isAboveAverage: false, startStr: "06:00", targetPerHour: 10 };
+  return { timeDisplay: "00:00", averagePerHour: "0.0", isAboveAverage: false, startStr: "06:00" };
 }
 
 export function StatsCards() {
