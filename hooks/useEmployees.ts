@@ -57,7 +57,11 @@ export function useEmployees() {
       .insert([employee])
       .select()
     
-    if (!error) fetchEmployees()
+    if (error) {
+      console.error("Erro ao adicionar funcionário:", error.message);
+    } else {
+      fetchEmployees();
+    }
     return { data, error }
   }
 

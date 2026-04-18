@@ -100,9 +100,11 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
           qrbox: { width: 320, height: 120 }, // Perfil mais horizontal para códigos lineares
           aspectRatio: 1.0,
           videoConstraints: {
+            facingMode: activeCamera,
             focusMode: 'continuous',
-            width: { min: 1280, ideal: 1920 }, // Solicita HD/Full HD para detalhes finos
-            height: { min: 720, ideal: 1080 }
+            // Mudança para 'ideal' sem 'min' para evitar erro em dispositivos que não suportam HD
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
           } as any
         },
         (decodedText) => {
@@ -133,8 +135,11 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
           // Silent failure for continuous scanning
         }
       );
-    } catch (err) {
+    } catch (err: any) {
       console.error("Scanner start error", err);
+      setError(err.message || "Erro ao acessar a câmera. Verifique as permissões.");
+      // Se falhar em iniciar, volta para o modo input após 3 segundos
+      setTimeout(() => setMode('input'), 3000);
     }
   };
 
