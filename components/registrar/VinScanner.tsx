@@ -33,6 +33,7 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
   const [isSuccessCaptured, setIsSuccessCaptured] = useState(false);
   
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const isTransitioning = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerId = "reader";
 
@@ -69,18 +70,26 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
   const isMatch = vinInput === vinConfirm && vinInput.length === 17;
 
   const stopScanner = async () => {
+    if (isTransitioning.current) return;
+    
     if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+      isTransitioning.current = true;
       try {
         await html5QrCodeRef.current.stop();
         html5QrCodeRef.current.clear();
       } catch (err) {
         console.error("Failed to stop scanner", err);
+      } finally {
+        isTransitioning.current = false;
       }
     }
   };
 
   const startScanner = async () => {
+    if (isTransitioning.current) return;
+    
     try {
+      isTransitioning.current = true;
       if (!html5QrCodeRef.current) {
         html5QrCodeRef.current = new Html5Qrcode(containerId, {
           formatsToSupport: [
@@ -140,6 +149,8 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
       setError(err.message || "Erro ao acessar a câmera. Verifique as permissões.");
       // Se falhar em iniciar, volta para o modo input após 3 segundos
       setTimeout(() => setMode('input'), 3000);
+    } finally {
+      isTransitioning.current = false;
     }
   };
 

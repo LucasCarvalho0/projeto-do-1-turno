@@ -68,11 +68,15 @@ export function useProduction(options?: { allHistory?: boolean }) {
           fetchData();
         }
       )
-      .subscribe((status: string) => {
+      .subscribe((status: string, err?: Error) => {
         if (status === 'SUBSCRIBED') {
           console.log("Inscrito no canal de mudanças da produção com sucesso.");
         } else if (status === 'CHANNEL_ERROR') {
-          console.error("Erro ao se inscrever no canal de mudanças da produção.");
+          console.error("Erro ao se inscrever no canal de mudanças da produção:", err?.message);
+          // Tentativa de reconexão após 5 segundos se falhar
+          setTimeout(() => {
+            if (channel) channel.subscribe();
+          }, 5000);
         }
       });
 
