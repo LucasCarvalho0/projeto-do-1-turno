@@ -34,8 +34,8 @@ export default function LoginPage() {
       const { data, error: dbError } = await supabase
         .from('admins')
         .select('*')
-        .eq('matricula', matricula)
-        .eq('senha', senha)
+        .eq('matricula', matricula.trim())
+        .eq('senha', senha.trim())
         .maybeSingle();
 
       if (dbError || !data) {
