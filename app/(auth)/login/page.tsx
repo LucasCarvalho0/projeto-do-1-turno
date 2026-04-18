@@ -36,7 +36,7 @@ export default function LoginPage() {
         .select('*')
         .eq('matricula', matricula)
         .eq('senha', senha)
-        .single();
+        .maybeSingle();
 
       if (dbError || !data) {
         throw new Error("Matrícula ou senha inválidos.");
