@@ -20,7 +20,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${inter.className} bg-background text-foreground antialiased`}>
+      <body className={`${inter.className} bg-background text-foreground antialiased`} suppressHydrationWarning>
         <PWARegistration />
         {children}
       </body>
