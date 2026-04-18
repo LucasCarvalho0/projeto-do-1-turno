@@ -5,8 +5,7 @@ CREATE TABLE IF NOT EXISTS public.admins (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     matricula TEXT UNIQUE NOT NULL,
     senha TEXT NOT NULL,
-    nome TEXT NOT NULL,
-    tipo TEXT DEFAULT 'admin'
+    nome TEXT NOT NULL
 );
 
 -- 2. Tabela de Funcionários (Operadores)
@@ -40,9 +39,17 @@ CREATE TABLE IF NOT EXISTS public.settings (
 INSERT INTO public.settings (id, meta) VALUES (1, 90) ON CONFLICT (id) DO NOTHING;
 
 -- Inserir usuário administrativo padrão (Checklist)
-INSERT INTO public.admins (matricula, senha, nome, tipo) 
-VALUES ('116203', '123', 'Anna Karolina', 'admin') 
+INSERT INTO public.admins (matricula, senha, nome) 
+VALUES ('116203', '123', 'Anna Karolina') 
 ON CONFLICT (matricula) DO NOTHING;
 
--- Habilitar Realtime para a tabela de produções
-ALTER PUBLICATION supabase_realtime ADD TABLE public.productions;
+-- Habilitar Realtime para a tabela de produções de forma segura
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'productions'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.productions;
+  END IF;
+END $$;

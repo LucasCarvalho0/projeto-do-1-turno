@@ -21,9 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format, isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import * as XLSX from 'xlsx';
-import { jsPDF } from "jspdf";
-import autoTable from 'jspdf-autotable';
+
 
 export default function HistoricoPage() {
   const { data: productions, loading } = useProduction({ allHistory: true });
@@ -57,7 +55,8 @@ export default function HistoricoPage() {
     });
   }, [productions, startDate, endDate, searchTerm]);
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
+    const XLSX = await import('xlsx');
     const ws = XLSX.utils.json_to_sheet(filteredData.map(item => ({
       Data: format(parseISO(item.timestamp), 'dd/MM/yyyy HH:mm:ss'),
       VIN: item.vin,
@@ -70,13 +69,17 @@ export default function HistoricoPage() {
     XLSX.writeFile(wb, `historico_producao_${startDate}_${endDate}.xlsx`);
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
+    const { jsPDF } = await import('jspdf');
+    const autoTableModule = await import('jspdf-autotable');
+    const autoTableDef = autoTableModule.default || autoTableModule;
+    
     const doc = new jsPDF();
     doc.text(`Histórico de Produção Automotiva`, 14, 15);
     doc.setFontSize(10);
     doc.text(`Período: ${startDate} até ${endDate}`, 14, 22);
     
-    autoTable(doc, {
+    autoTableDef(doc, {
       startY: 25,
       head: [['Data/Hora', 'VIN', 'Versão', 'Operador', 'Status']],
       body: filteredData.map(item => [

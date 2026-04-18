@@ -33,7 +33,20 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
   const [isSuccessCaptured, setIsSuccessCaptured] = useState(false);
   
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const containerId = "reader";
+
+  // Garantir foco constante no input para leitores Bluetooth/USB
+  useEffect(() => {
+    if (mode === 'input' && !disabled) {
+      const focusInterval = setInterval(() => {
+        if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'BUTTON') {
+          inputRef.current?.focus();
+        }
+      }, 500);
+      return () => clearInterval(focusInterval);
+    }
+  }, [mode, disabled]);
 
   // Validação em tempo real
   useEffect(() => {
@@ -83,9 +96,14 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
       await html5QrCodeRef.current.start(
         { facingMode: activeCamera },
         {
-          fps: 25, // Maior FPS para sensação de "collector"
-          qrbox: { width: 300, height: 160 },
+          fps: 30, // Aumentado para maior fluidez
+          qrbox: { width: 320, height: 120 }, // Perfil mais horizontal para códigos lineares
           aspectRatio: 1.0,
+          videoConstraints: {
+            focusMode: 'continuous',
+            width: { min: 1280, ideal: 1920 }, // Solicita HD/Full HD para detalhes finos
+            height: { min: 720, ideal: 1080 }
+          } as any
         },
         (decodedText) => {
           const clean = decodedText.toUpperCase().slice(0, 17);
@@ -168,8 +186,18 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
       onScan(vinInput);
       setVinInput("");
       setVinConfirm("");
-      setMode('input');
       setError(null);
+      // Mantém o modo input focado após submissão
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (isMatch) {
+        handleSubmit();
+      }
     }
   };
 
@@ -275,78 +303,79 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
           </div>
         )}
 
-        {mode === 'input' && (
-          <div className="w-full max-w-md space-y-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Número do VIN</label>
-              <div className="relative group">
-                <input
-                  type="text"
-                  autoFocus
-                  maxLength={17}
-                  placeholder="DIGITE O VIN (17 CARACT)"
-                  className={cn(
-                    "w-full bg-white/[0.02] border rounded-2xl p-5 pl-14 text-lg md:text-xl font-black font-mono tracking-[0.1em] outline-none transition-all placeholder:text-slate-800",
-                    error ? "border-red-500 text-red-500 animate-shake" : "border-white/[0.05] text-accent-gold focus:border-accent-gold/40",
-                    disabled && "opacity-50 cursor-not-allowed"
-                  )}
-                  value={vinInput}
-                  onChange={(e) => handleInputChange(e, 'original')}
-                  disabled={disabled}
-                />
-                <Scan className={cn("absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6", error ? "text-red-500" : (disabled ? "text-slate-700" : "text-slate-500 group-focus-within:text-accent-gold transition-colors"))} />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Confirmar VIN</label>
-              <div className="relative group">
-                <input
-                  type="text"
-                  maxLength={17}
-                  placeholder="REPITA O VIN PARA CONFERIR"
-                  className={cn(
-                    "w-full bg-white/[0.02] border rounded-2xl p-5 pl-14 text-lg md:text-xl font-black font-mono tracking-[0.1em] outline-none transition-all placeholder:text-slate-800",
-                    isMatch ? "border-green-500/50 text-green-500" : "border-white/[0.05] text-white focus:border-white/20",
-                    disabled && "opacity-50 cursor-not-allowed"
-                  )}
-                  value={vinConfirm}
-                  onChange={(e) => handleInputChange(e, 'confirm')}
-                  disabled={disabled || !vinInput}
-                />
-                <CheckCircle2 className={cn("absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6", isMatch ? "text-green-500" : "text-slate-700")} />
-              </div>
-            </div>
-            
-            {error && (
-              <div className="flex items-center gap-2 justify-center text-red-500 animate-in fade-in slide-in-from-top-2">
-                <AlertCircle className="w-4 h-4" />
-                <span className="text-[10px] font-black uppercase tracking-widest">{error}</span>
-              </div>
-            )}
-
-            {vinInput.length === 17 && vinConfirm.length === 17 && !isMatch && (
-              <div className="flex items-center gap-2 justify-center text-red-400 animate-in fade-in">
-                <AlertCircle className="w-3 h-3" />
-                <span className="text-[9px] font-black uppercase tracking-widest text-center">Os números digitados não coincidem</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        <button
-          onClick={() => handleSubmit()}
-          disabled={!isMatch || disabled}
-          className={cn(
-            "flex items-center gap-3 px-10 py-5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all active:scale-95 shadow-2xl mt-4",
-            isMatch && !disabled 
-              ? "bg-accent-gold text-black shadow-yellow-500/20" 
-              : "bg-white/[0.03] text-slate-700 cursor-not-allowed"
-          )}
+        <form 
+          onSubmit={handleSubmit}
+          className="w-full flex flex-col items-center gap-6"
         >
-          <CheckCircle2 className="w-5 h-5" />
-          Confirmar Montagem
-        </button>
+          {mode === 'input' && (
+            <div className="w-full max-w-md space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Número do VIN</label>
+                <div className="relative group">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    autoFocus
+                    maxLength={17}
+                    onKeyDown={handleKeyDown}
+                    placeholder="DIGITE OU BIPE O VIN"
+                    className={cn(
+                      "w-full bg-white/[0.02] border rounded-2xl p-5 pl-14 text-lg md:text-xl font-black font-mono tracking-[0.1em] outline-none transition-all placeholder:text-slate-800",
+                      error ? "border-red-500 text-red-500 animate-shake" : "border-white/[0.05] text-accent-gold focus:border-accent-gold/40",
+                      disabled && "opacity-50 cursor-not-allowed"
+                    )}
+                    value={vinInput}
+                    onChange={(e) => handleInputChange(e, 'original')}
+                    disabled={disabled}
+                  />
+                  <Scan className={cn("absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6", error ? "text-red-500" : (disabled ? "text-slate-700" : "text-slate-500 group-focus-within:text-accent-gold transition-colors"))} />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-4">Confirmar VIN</label>
+                <div className="relative group">
+                  <input
+                    type="text"
+                    maxLength={17}
+                    placeholder="CONFIRMAÇÃO (AUTO-FILL ATIVO)"
+                    onKeyDown={handleKeyDown}
+                    className={cn(
+                      "w-full bg-white/[0.02] border rounded-2xl p-5 pl-14 text-lg md:text-xl font-black font-mono tracking-[0.1em] outline-none transition-all placeholder:text-slate-800",
+                      isMatch ? "border-green-500/50 text-green-500" : "border-white/[0.05] text-white focus:border-white/20",
+                      disabled && "opacity-50 cursor-not-allowed"
+                    )}
+                    value={vinConfirm}
+                    onChange={(e) => handleInputChange(e, 'confirm')}
+                    disabled={disabled || !vinInput}
+                  />
+                  <CheckCircle2 className={cn("absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6", isMatch ? "text-green-500" : "text-slate-700")} />
+                </div>
+              </div>
+              
+              {error && (
+                <div className="flex items-center gap-2 justify-center text-red-500 animate-in fade-in slide-in-from-top-2">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">{error}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={!isMatch || disabled}
+            className={cn(
+              "flex items-center gap-3 px-10 py-5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all active:scale-95 shadow-2xl mt-4",
+              isMatch && !disabled 
+                ? "bg-accent-gold text-black shadow-yellow-500/20" 
+                : "bg-white/[0.03] text-slate-700 cursor-not-allowed"
+            )}
+          >
+            <CheckCircle2 className="w-5 h-5" />
+            Confirmar Montagem
+          </button>
+        </form>
       </div>
 
       <p className="text-[10px] uppercase font-black tracking-[0.3em] text-slate-700 text-center px-6">

@@ -13,8 +13,10 @@ interface TopbarProps {
 
 export function Topbar({ onMenuClick, isSidebarOpen }: TopbarProps) {
   const [time, setTime] = useState(new Date());
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
@@ -38,7 +40,7 @@ export function Topbar({ onMenuClick, isSidebarOpen }: TopbarProps) {
         </div>
 
         <div className="text-accent-gold font-black text-xl md:text-3xl tracking-tighter font-mono italic">
-          {format(time, "HH:mm:ss")}
+          {mounted ? format(time, "HH:mm:ss") : "--:--:--"}
         </div>
       </div>
     </header>
