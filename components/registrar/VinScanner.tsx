@@ -162,19 +162,34 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
   const toggleTorch = async () => {
     if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
       try {
+        const nextState = !isTorchOn;
+        // Tenta aplicar via constraints do próprio html5-qrcode se disponível
         const scanner = html5QrCodeRef.current as any;
-        const track = typeof scanner.getRunningTrack === 'function' 
-          ? scanner.getRunningTrack() 
-          : null;
+        
+        // Versão mais robusta para acessar o track de vídeo
+        let track: MediaStreamTrack | null = null;
+        
+        if (typeof scanner.getRunningTrack === 'function') {
+          track = scanner.getRunningTrack();
+        } else if (scanner._webcamManager?._localMediaStream) {
+          track = scanner._webcamManager._localMediaStream.getVideoTracks()[0];
+        }
 
-        if (track && 'applyConstraints' in track) {
-          await track.applyConstraints({
-            advanced: [{ torch: !isTorchOn }]
-          });
-          setIsTorchOn(!isTorchOn);
+        if (track) {
+          const capabilities = track.getCapabilities() as any;
+          if (capabilities.torch) {
+            await track.applyConstraints({
+              advanced: [{ torch: nextState }]
+            } as any);
+            setIsTorchOn(nextState);
+          } else {
+            alert("Lanterna não suportada nesta câmera ou dispositivo.");
+          }
+        } else {
+          console.warn("Track de vídeo não encontrado para alternar lanterna.");
         }
       } catch (err) {
-        console.warn("Flashlight not supported on this device", err);
+        console.error("Erro ao alternar lanterna:", err);
       }
     }
   };
@@ -236,12 +251,12 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
 
       <div className="flex-1 w-full flex flex-col items-center justify-center gap-6">
         {mode === 'camera' && (
-          <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-in fade-in duration-300">
+          <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300">
             <div className="relative w-full h-full">
               {/* O vídeo do scanner preenche a tela */}
               <div id={containerId} className="w-full h-full object-cover" />
               
-              {/* Máscara de Scanner Profissional */}
+              {/* Máscara de Scanner Profissional - AGORA TRANSPARENTE */}
               <div className="scanner-mask pointer-events-none">
                 <div className="scanner-cutout">
                   {/* Linha Laser Neon - Garantidamente no topo do recorte */}
@@ -257,13 +272,10 @@ export function VinScanner({ onScan, disabled }: VinScannerProps) {
 
               {/* Informações de Status */}
               <div className="absolute top-12 left-0 right-0 z-[60] flex flex-col items-center gap-4 pointer-events-none">
-                <div className="px-6 py-2 bg-black/40 backdrop-blur-md border border-white/10 rounded-full flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Mira Laser Vermelha Ativa</p>
+                <div className="px-6 py-2 bg-black/60 backdrop-blur-xl border border-white/20 rounded-full flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_#ef4444]" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Mira Laser Ativa - 100% Visão</p>
                 </div>
-                <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest text-center px-10">
-                  Posicione o código de barras no centro do retângulo
-                </p>
               </div>
 
               {/* Botões de Controle Premium (Glassmorphism) */}
